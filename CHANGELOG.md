@@ -8,8 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### In Progress
 
-- Add support for additional virtual formats. 24bit, 16bit.
+## [0.3.0] - Unreleased
+### Added
 - Sync BlackHole audio clock with any audio device.
+- Add support for additional virtual formats. 24bit, 16bit.
 
 ## [0.2.9] - 2021-1-27
 ### Changed
