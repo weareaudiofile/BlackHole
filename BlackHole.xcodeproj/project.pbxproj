@@ -94,6 +94,7 @@
 				2D7477A61578168D00412279 /* Frameworks */,
 				2D46CA7A17D6ADC500049D4A /* Resources */,
 				3D7E6D4725E6FE0E00DFE7A4 /* ShellScript */,
+				3D7E6D4B25E7006000DFE7A4 /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -165,6 +166,23 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\ncp -R $BUILT_PRODUCTS_DIR/BlackHole.driver /Library/Audio/Plug-Ins/HAL/\n";
+		};
+		3D7E6D4B25E7006000DFE7A4 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /usr/bin/osascript;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\ndo shell script \"sudo launchctl kickstart -kp system/com.apple.audio.coreaudiod\" with administrator privileges\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
