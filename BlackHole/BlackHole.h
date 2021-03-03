@@ -11,6 +11,7 @@
 
 #endif /* BlackHole_h */
 
+#include <CoreAudio/CoreAudio.h>
 #include <CoreAudio/AudioServerPlugIn.h>
 #include <dispatch/dispatch.h>
 #include <mach/mach_time.h>
@@ -101,16 +102,17 @@
 enum
 {
     kObjectID_PlugIn                    = kAudioObjectPlugInObject,
-    kObjectID_Box                        = 2,
-    kObjectID_Device                    = 3,
-    kObjectID_Stream_Input                = 4,
-    kObjectID_Volume_Input_Master        = 5,
-    kObjectID_Mute_Input_Master            = 6,
-    kObjectID_DataSource_Input_Master    = 7,
-    kObjectID_Stream_Output                = 8,
-    kObjectID_Volume_Output_Master        = 9,
-    kObjectID_Mute_Output_Master        = 10,
-    kObjectID_DataSource_Output_Master    = 11
+    kObjectID_Box                           = 2,
+    kObjectID_Device                        = 3,
+    kObjectID_Stream_Input                  = 4,
+    kObjectID_Volume_Input_Master           = 5,
+    kObjectID_Mute_Input_Master             = 6,
+    kObjectID_DataSource_Input_Master       = 7,
+    kObjectID_Stream_Output                 = 8,
+    kObjectID_Volume_Output_Master          = 9,
+    kObjectID_Mute_Output_Master            = 10,
+    kObjectID_DataSource_Output_Master      = 11,
+    kObjectID_ClockSource                   = 12
 };
 
 //    Declare the stuff that tracks the state of the plug-in, the device and its sub-objects.
@@ -170,6 +172,10 @@ static Float32*                     ringBuffer;
 static UInt64                       ringBufferOffset                    = 0;
 //static UInt64                       inIOBufferFrameSize                 = 0;
 static UInt64                       remainingRingBufferFrameSize        = 0;
+
+static UInt32                       kClockSource_NumberItems            = 10;
+#define                             kClockSource_ItemNamePattern         "BlackHole Clock %i"
+static UInt32                       gClockSource_Value                  = 0;
 
 //kAudioHardwarePropertySleepingIsAllowed
 
