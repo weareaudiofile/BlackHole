@@ -274,6 +274,10 @@ static OSStatus	BlackHole_AddDeviceClient(AudioServerPlugInDriverRef inDriver, A
 	//	This allows the device to act differently depending on who the client is. This driver does
 	//	not need to track the clients using the device, so we just check the arguments and return
 	//	successfully.
+
+    char* bundleID = calloc(100, sizeof(char));
+    CFStringGetCString(inClientInfo->mBundleID, bundleID, 100, kCFStringEncodingUTF8);
+    DebugMsg("BlackHole_AddDeviceClient id: %i, bundle: %s, process: %i", inClientInfo->mClientID, bundleID, inClientInfo->mProcessID);
 	
 	#pragma unused(inClientInfo)
 	
@@ -283,6 +287,62 @@ static OSStatus	BlackHole_AddDeviceClient(AudioServerPlugInDriverRef inDriver, A
 	//	check the arguments
 	FailWithAction(inDriver != gAudioServerPlugInDriverRef, theAnswer = kAudioHardwareBadObjectError, Done, "BlackHole_AddDeviceClient: bad driver reference");
 	FailWithAction(inDeviceObjectID != kObjectID_Device, theAnswer = kAudioHardwareBadObjectError, Done, "BlackHole_AddDeviceClient: bad device ID");
+    
+    
+    // lock the io
+    // perhaps there is a better way to do this.
+    // only the ring buffer might take a while.
+    // pthread_mutex_lock(&gDevice_IOMutex);
+    
+    // increment the number of clients
+    numberOfClients += 1;
+    
+    // expand the list
+    UInt32* newClients = realloc(clients, sizeof(Float32) * numberOfClients);
+    if (newClients == NULL)
+    {
+        DebugMsg("BlackHole: Add new client %i, failed to realloc clients.", inClientInfo->mClientID);
+        theAnswer = kAudioHardwareIllegalOperationError;
+    }
+    else
+    {
+        DebugMsg("BlackHole: added new client, client: %i", inClientInfo->mClientID);
+        // save the new pointer
+        clients = newClients;
+        
+        // add the new client
+        clients[numberOfClients-1] = inClientInfo->mClientID;
+        
+        // expand the buffer list
+        Float32** newClientRingBuffers = realloc(clientRingBuffers, sizeof(Float32) * numberOfClients);
+        if (newClientRingBuffers == NULL)
+        {
+            DebugMsg("BlackHole: Add new client %i, failed to realloc clientRingBuffers", inClientInfo->mClientID);
+            theAnswer = kAudioHardwareIllegalOperationError;
+        }
+        else
+        {
+            DebugMsg("BlackHole: expanded buffer list client: %i", inClientInfo->mClientID);
+            // save the new bufferlist
+            clientRingBuffers = newClientRingBuffers;
+            
+            // allocate a new ring buffer
+            Float32* buffer = calloc(RING_BUFFER_FRAME_SIZE * NUMBER_OF_CHANNELS, sizeof(Float32));
+            if (buffer == NULL)
+            {
+                DebugMsg("BlackHole: Add new client %i, failed to realloc client buffer", inClientInfo->mClientID);
+                theAnswer = kAudioHardwareIllegalOperationError;
+            }
+            else
+            {
+                DebugMsg("BlackHole: allocated new buffer, client: %i", inClientInfo->mClientID);
+                // add the buffer to the buffer list.
+                clientRingBuffers[numberOfClients-1] = buffer;
+            }
+        }
+    }
+    // unlock the io.
+    //pthread_mutex_lock(&gDevice_IOMutex);
 
 Done:
 	return theAnswer;
@@ -293,6 +353,10 @@ static OSStatus	BlackHole_RemoveDeviceClient(AudioServerPlugInDriverRef inDriver
 	//	This method is used to inform the driver about a client that is no longer using the given
 	//	device. This driver does not track clients, so we just check the arguments and return
 	//	successfully.
+    
+    char* bundleID = calloc(100, sizeof(char));
+    CFStringGetCString(inClientInfo->mBundleID, bundleID, 100, kCFStringEncodingUTF8);
+    DebugMsg("BlackHole_RemoveDeviceClient id: %i, bundle: %s, process: %i", inClientInfo->mClientID, bundleID, inClientInfo->mProcessID);
 	
 	#pragma unused(inClientInfo)
 	
@@ -302,6 +366,60 @@ static OSStatus	BlackHole_RemoveDeviceClient(AudioServerPlugInDriverRef inDriver
 	//	check the arguments
 	FailWithAction(inDriver != gAudioServerPlugInDriverRef, theAnswer = kAudioHardwareBadObjectError, Done, "BlackHole_RemoveDeviceClient: bad driver reference");
 	FailWithAction(inDeviceObjectID != kObjectID_Device, theAnswer = kAudioHardwareBadObjectError, Done, "BlackHole_RemoveDeviceClient: bad device ID");
+    
+    // free the client ring buffer
+    Float32* buffer = getClientRingBuffer(inClientInfo->mClientID);
+    if (buffer != NULL)
+    {
+        free(buffer);
+    }
+    
+    UInt32 clientIndex;
+    for (UInt32 i = 0; i < numberOfClients; i++)
+    {
+        if (clients[i] == inClientInfo->mClientID)
+        {
+            clientIndex = i;
+        }
+    }
+    
+    // remove the client buffer pointer and resize the client ring buffer list
+    // remove the client id and resize the client id list
+    for (UInt32 i = 0; i < numberOfClients; i++)
+    {
+        if (i > clientIndex)
+        {
+            // push everything up an index.
+            clients[i-1] = clients[i];
+            clientRingBuffers[i-1] = clientRingBuffers[i-1];
+        }
+    }
+    
+    numberOfClients -= 1;
+    
+    // resize
+    // could fail? Not sure how to handle a failure.
+    UInt32* newClients = realloc(clients, numberOfClients);
+    if (newClients == NULL)
+    {
+        DebugMsg("BlackHole failed to remove client. Fatal error. Exiting.");
+        abort();
+    }
+    else
+    {
+        clients = newClients;
+    }
+    
+    Float32** newClientRingBuffers = realloc(clientRingBuffers, numberOfClients);
+    if (newClientRingBuffers == NULL)
+    {
+        DebugMsg("BlackHole failed to remove client. Fatal error. Exiting.");
+        abort();
+    }
+    else
+    {
+        clientRingBuffers = newClientRingBuffers;
+    }
 
 Done:
 	return theAnswer;
@@ -3658,6 +3776,8 @@ static OSStatus	BlackHole_StartIO(AudioServerPlugInDriverRef inDriver, AudioObje
 	//	So, work only needs to be done when the first client starts. All subsequent starts simply
 	//	increment the counter.
     
+    // Only seems to be called when the first client starts IO.
+    
     DebugMsg("BlackHole Start IO");
 	
 	#pragma unused(inClientID)
@@ -3685,9 +3805,6 @@ static OSStatus	BlackHole_StartIO(AudioServerPlugInDriverRef inDriver, AudioObje
 		gDevice_NumberTimeStamps = 0;
 		gDevice_AnchorSampleTime = 0;
 		gDevice_AnchorHostTime = mach_absolute_time();
-        
-        // allocate ring buffer
-        ringBuffer = calloc(RING_BUFFER_FRAME_SIZE * NUMBER_OF_CHANNELS, sizeof(Float32));
 	}
 	else
 	{
@@ -3731,13 +3848,13 @@ static OSStatus	BlackHole_StopIO(AudioServerPlugInDriverRef inDriver, AudioObjec
 	{
 		//	We need to stop the hardware, which in this case means that there's nothing to do.
 		gDevice_IOIsRunning = 0;
-        free(ringBuffer);
 	}
 	else
 	{
 		//	IO is still running, so just bump the counter
 		--gDevice_IOIsRunning;
 	}
+    
 	
 	//	unlock the state lock
 	pthread_mutex_unlock(&gPlugIn_StateMutex);
@@ -3884,9 +4001,47 @@ static OSStatus	BlackHole_DoIOOperation(AudioServerPlugInDriverRef inDriver, Aud
     // IO Lock
     pthread_mutex_lock(&gDevice_IOMutex);
 
+
+    
+    // From Application to BlackHole
+    if(inOperationID == kAudioServerPlugInIOOperationWriteMix)
+    {
+        
+        Float32* buffer = (Float32*)ioMainBuffer;
+        Float32* ringBuffer = getClientRingBuffer(inClientID);
+
+        UInt64 mSampleTime = inIOCycleInfo->mOutputTime.mSampleTime;
+        
+
+        for(UInt32 frame = 0; frame < inIOBufferFrameSize; frame++){
+            for(int channel = 0; channel < NUMBER_OF_CHANNELS; channel++){
+                
+                // don't do anything if muted
+                if (!gMute_Output_Master_Value)
+                {
+                    // write to internal ring buffer
+                    ringBuffer[((mSampleTime+frame)%kDevice_RingBufferSize)*NUMBER_OF_CHANNELS+channel] = buffer[frame*NUMBER_OF_CHANNELS+channel] * gVolume_Output_Master_Value;
+                }
+                else
+                {
+                    // silence if muted.
+                    buffer[frame*NUMBER_OF_CHANNELS+channel] = 0;
+                }
+            }
+
+        }
+        
+        // clear the io buffer
+        memset(ioMainBuffer, 0, inIOBufferFrameSize * NUMBER_OF_CHANNELS * sizeof(Float32));
+    }
+    
     // From BlackHole to Application
     if(inOperationID == kAudioServerPlugInIOOperationReadInput)
     {
+        
+        // clear the io buffer first.
+        memset(ioMainBuffer, 0, inIOBufferFrameSize * NUMBER_OF_CHANNELS * sizeof(Float32));
+        
 
         Float32* buffer = (Float32*)ioMainBuffer;
         UInt64 mSampleTime = inIOCycleInfo->mInputTime.mSampleTime;
@@ -3897,51 +4052,22 @@ static OSStatus	BlackHole_DoIOOperation(AudioServerPlugInDriverRef inDriver, Aud
                 // don't do anything if muted
                 if (!gMute_Output_Master_Value)
                 {
-                    // write to the ioMainBuffer
-                    buffer[frame*NUMBER_OF_CHANNELS+channel] = ringBuffer[((mSampleTime+frame)%kDevice_RingBufferSize)*NUMBER_OF_CHANNELS+channel];
+                    // mix all ring buffers together.
+                    for (UInt32 clientIndex = 0; clientIndex < numberOfClients; clientIndex++)
+                    {
+                        Float32* ringBuffer = clientRingBuffers[clientIndex];
+                        
+                        // write to the ioMainBuffer
+                        buffer[frame*NUMBER_OF_CHANNELS+channel] += ringBuffer[((mSampleTime+frame)%kDevice_RingBufferSize)*NUMBER_OF_CHANNELS+channel];
+                    }
                 }
                 else
                 {
+                    // silence if muted
                     buffer[frame*NUMBER_OF_CHANNELS+channel] = 0;
                 }
-                
-                // clear ring buffer leading by 16384 samples.
-                ringBuffer[((mSampleTime+frame-16384)%kDevice_RingBufferSize)*NUMBER_OF_CHANNELS+channel] = 0;
-
             }
         }
-    }
-    
-    // From Application to BlackHole
-    if(inOperationID == kAudioServerPlugInIOOperationWriteMix)
-    {
-        
-        Float32* buffer = (Float32*)ioMainBuffer;
-
-        UInt64 mSampleTime = inIOCycleInfo->mOutputTime.mSampleTime;
-
-        for(UInt32 frame = 0; frame < inIOBufferFrameSize; frame++){
-            for(int channel = 0; channel < NUMBER_OF_CHANNELS; channel++){
-                
-                // don't do anything if muted
-                if (!gMute_Output_Master_Value)
-                {
-                    // write to internal ring buffer
-                    ringBuffer[((mSampleTime+frame)%kDevice_RingBufferSize)*NUMBER_OF_CHANNELS+channel] += buffer[frame*NUMBER_OF_CHANNELS+channel] * gVolume_Output_Master_Value;
-                }
-                else
-                {
-                    buffer[frame*NUMBER_OF_CHANNELS+channel] = 0;
-                }
-                
-                // clear ring buffer trailing by 16384 samples.
-                ringBuffer[((mSampleTime+frame+8192)%kDevice_RingBufferSize)*NUMBER_OF_CHANNELS+channel] = 0;
-            }
-
-        }
-        
-        // clear the io buffer
-        memset(ioMainBuffer, 0, inIOBufferFrameSize * NUMBER_OF_CHANNELS * sizeof(Float32));
     }
     
     pthread_mutex_unlock(&gDevice_IOMutex);

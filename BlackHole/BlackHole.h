@@ -161,15 +161,31 @@ static UInt32                       gDataSource_Input_Master_Value      = 0;
 static UInt32                       gDataSource_Output_Master_Value     = 0;
 
 #define                             LATENCY_FRAME_SIZE                  0
-#define                             NUMBER_OF_CHANNELS                  16
+#define                             NUMBER_OF_CHANNELS                  2
 #define                             BITS_PER_CHANNEL                    32
 #define                             BYTES_PER_CHANNEL                   (BITS_PER_CHANNEL / 8)
 #define                             BYTES_PER_FRAME                     (NUMBER_OF_CHANNELS * BYTES_PER_CHANNEL)
 #define                             RING_BUFFER_FRAME_SIZE               ((65536 + LATENCY_FRAME_SIZE) * NUMBER_OF_CHANNELS)
-static Float32*                     ringBuffer;
+static Float32**                    clientRingBuffers = NULL;
+static UInt32*                      clients = NULL;
+static UInt32                       numberOfClients = 0;
 static UInt64                       ringBufferOffset                    = 0;
 //static UInt64                       inIOBufferFrameSize                 = 0;
 static UInt64                       remainingRingBufferFrameSize        = 0;
+
+
+// returns the pointer of the ringbuffer for a specified client. Null if invalid.
+static Float32* getClientRingBuffer(UInt32 client)
+{
+    for (UInt32 i = 0; i < numberOfClients; i++)
+    {
+        if (clients[i] == client)
+        {
+            return clientRingBuffers[i];
+        }
+    }
+    return NULL;
+}
 
 //kAudioHardwarePropertySleepingIsAllowed
 
