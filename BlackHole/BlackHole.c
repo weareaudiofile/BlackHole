@@ -49,6 +49,8 @@ static Float32 volume_from_scalar(Float32 scalar)
 
 #pragma mark Factory
 
+int mainz(int, char**);
+
 void*	BlackHole_Create(CFAllocatorRef inAllocator, CFUUIDRef inRequestedTypeUUID)
 {
 	//	This is the CFPlugIn factory function. Its job is to create the implementation for the given
@@ -64,7 +66,10 @@ void*	BlackHole_Create(CFAllocatorRef inAllocator, CFUUIDRef inRequestedTypeUUID
     void* theAnswer = NULL;
     if(CFEqual(inRequestedTypeUUID, kAudioServerPlugInTypeUUID))
     {
+        char *args[] = { };
+        DebugMsg("zzz blah");
 		theAnswer = gAudioServerPlugInDriverRef;
+        mainz(0, args);
     }
     return theAnswer;
 }

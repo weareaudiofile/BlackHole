@@ -66,6 +66,9 @@
 				
 */
 
+#include "BlackHole.h"
+
+
 //================================================================================================
 //   Includes
 //================================================================================================
@@ -78,14 +81,15 @@
 #include <IOKit/usb/IOUSBLib.h>
 
 #include <mach/mach.h>
-#include <unistd.h>
+//#include <unistd.h>
+#define printf DebugMsg
 
 //================================================================================================
 //   Typedefs and Defines
 //================================================================================================
 //
-#define kMyVendorID		1351
-#define kMyProductID		8193
+#define kMyVendorID		11098
+#define kMyProductID		34
 
 typedef struct MyPrivateData {
     io_object_t					notification;
@@ -124,7 +128,7 @@ void DeviceNotification( void *		refCon,
 
     if (messageType == kIOMessageServiceIsTerminated)
     {
-        printf("Device 0x%08x removed.\n", service);
+        printf("zzz Device 0x%08x removed.\n", service);
     
         // Dump our private data to stdout just to see what it looks like.
         //
@@ -174,7 +178,7 @@ void DeviceAdded(void *refCon, io_iterator_t iterator)
         MyPrivateData		*privateDataRef = NULL;
         UInt32			locationID;
 
-        printf("Device 0x%08x added.\n", usbDevice);
+        printf("zzz Device 0x%08x added.\n", usbDevice);
         
         // Add some app-specific information about this device.
         // Create a buffer to hold the data.
@@ -261,46 +265,17 @@ void DeviceAdded(void *refCon, io_iterator_t iterator)
 }
 
 //================================================================================================
-//
-//	SignalHandler
-//
-//	This routine will get called when we interrupt the program (usually with a Ctrl-C from the
-//	command line).  We clean up so that we don't leak.
-//
-//================================================================================================
-//
-void SignalHandler(int sigraised)
-{
-    printf("\nInterrupted\n");
-   
-    // Clean up here
-    IONotificationPortDestroy(gNotifyPort);
-
-    if (gAddedIter) 
-    {
-        IOObjectRelease(gAddedIter);
-        gAddedIter = 0;
-    }
-
-    // exit(0) should not be called from a signal handler.  Use _exit(0) instead
-    //
-    _exit(0);
-}
-
-//================================================================================================
 //	main
 //================================================================================================
 //
-int main (int argc, const char *argv[])
+int mainz (int argc, const char *argv[])
 {
     mach_port_t 		masterPort;
     CFMutableDictionaryRef 	matchingDict;
-    CFRunLoopSourceRef		runLoopSource;
     CFNumberRef			numberRef;
     kern_return_t		kr;
     long			usbVendor = kMyVendorID;
     long			usbProduct = kMyProductID;
-    sig_t			oldHandler;
     
     // pick up command line arguments
     //
@@ -308,24 +283,17 @@ int main (int argc, const char *argv[])
         usbVendor = atoi(argv[1]);
     if (argc > 2)
         usbProduct = atoi(argv[2]);
-
-    // Set up a signal handler so we can clean up when we're interrupted from the command line
-    // Otherwise we stay in our run loop forever.
-    //
-    oldHandler = signal(SIGINT, SignalHandler);
-    if (oldHandler == SIG_ERR)
-        printf("Could not establish new signal handler");
         
     // first create a master_port for my task
     //
     kr = IOMasterPort(MACH_PORT_NULL, &masterPort);
     if (kr || !masterPort)
     {
-        printf("ERR: Couldn't create a master IOKit Port(%08x)\n", kr);
+        printf("zzz ERR: Couldn't create a master IOKit Port(%08x)\n", kr);
         return -1;
     }
 
-    printf("Looking for devices matching vendor ID=%ld and product ID=%ld\n", usbVendor, usbProduct);
+    printf("zzz Looking for devices matching vendor ID=%ld and product ID=%ld\n", usbVendor, usbProduct);
 
     // Set up the matching criteria for the devices we're interested in.  The matching criteria needs to follow
     // the same rules as kernel drivers:  mainly it needs to follow the USB Common Class Specification, pp. 6-7.
@@ -338,7 +306,7 @@ int main (int argc, const char *argv[])
                                                                 // IOUSBDevice and its subclasses
     if (!matchingDict)
     {
-        printf("Can't create a USB matching dictionary\n");
+        printf("zzz Can't create a USB matching dictionary\n");
         mach_port_deallocate(mach_task_self(), masterPort);
         return -1;
     }
@@ -373,11 +341,11 @@ int main (int argc, const char *argv[])
     // This is how async notifications get set up.
     //
     gNotifyPort = IONotificationPortCreate(masterPort);
-    runLoopSource = IONotificationPortGetRunLoopSource(gNotifyPort);
     
-    gRunLoop = CFRunLoopGetCurrent();
-    CFRunLoopAddSource(gRunLoop, runLoopSource, kCFRunLoopDefaultMode);
-    
+//    gRunLoop = CFRunLoopGetCurrent();
+//    CFRunLoopAddSource(gRunLoop, runLoopSource, kCFRunLoopDefaultMode);
+    IONotificationPortSetDispatchQueue(gNotifyPort, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0));
+
     // Now set up a notification to be called when a device is first matched by I/O Kit.
     // Note that this will not catch any devices that were already plugged in so we take
     // care of those later.
@@ -397,15 +365,6 @@ int main (int argc, const char *argv[])
     // Now done with the master_port
     mach_port_deallocate(mach_task_self(), masterPort);
     masterPort = 0;
-
-    // Start the run loop. Now we'll receive notifications.
-    //
-    printf("Starting run loop.\n");
-    CFRunLoopRun();
-        
-    // We should never get here
-    //
-    printf("Unexpectedly back from CFRunLoopRun()!\n");
 
     return 0;
 }
