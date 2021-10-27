@@ -13,6 +13,7 @@
 		2D616EF415B8C82500D598BD /* BlackHole.c in Sources */ = {isa = PBXBuildFile; fileRef = 2D616EF215B8C82500D598BD /* BlackHole.c */; };
 		2D7477AD1578168D00412279 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2D7477AC1578168D00412279 /* CoreFoundation.framework */; };
 		6C8229692729B70C00E12A3A /* USBNotificationExample.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8229682729B70C00E12A3A /* USBNotificationExample.c */; };
+		6C8229702729B75300E12A3A /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2DD7AA9915EC572000C67AE1 /* IOKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,6 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6C8229702729B75300E12A3A /* IOKit.framework in Frameworks */,
 				2D7477AD1578168D00412279 /* CoreFoundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
