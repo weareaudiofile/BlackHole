@@ -12,6 +12,7 @@
 		03FDCADC233FAE0500101681 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 03FDCADB233FAE0500101681 /* LICENSE */; };
 		2D616EF415B8C82500D598BD /* BlackHole.c in Sources */ = {isa = PBXBuildFile; fileRef = 2D616EF215B8C82500D598BD /* BlackHole.c */; };
 		2D7477AD1578168D00412279 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2D7477AC1578168D00412279 /* CoreFoundation.framework */; };
+		6C8229692729B70C00E12A3A /* USBNotificationExample.c in Sources */ = {isa = PBXBuildFile; fileRef = 6C8229682729B70C00E12A3A /* USBNotificationExample.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +28,7 @@
 		2DA8FA1515FEAAB000F04B50 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		2DD7AA9915EC572000C67AE1 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		2DED183A15C357180091BE97 /* Kernel.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Kernel.framework; path = System/Library/Frameworks/Kernel.framework; sourceTree = SDKROOT; };
+		6C8229682729B70C00E12A3A /* USBNotificationExample.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = USBNotificationExample.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -48,6 +50,7 @@
 				2D616EF115B8C82500D598BD /* BlackHole-Info.plist */,
 				03FEA4BB233D27770005D277 /* BlackHole.h */,
 				2D616EF215B8C82500D598BD /* BlackHole.c */,
+				6C8229682729B70C00E12A3A /* USBNotificationExample.c */,
 			);
 			path = BlackHole;
 			sourceTree = "<group>";
@@ -152,6 +155,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6C8229692729B70C00E12A3A /* USBNotificationExample.c in Sources */,
 				2D616EF415B8C82500D598BD /* BlackHole.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
