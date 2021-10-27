@@ -67,7 +67,6 @@ void*	BlackHole_Create(CFAllocatorRef inAllocator, CFUUIDRef inRequestedTypeUUID
     if(CFEqual(inRequestedTypeUUID, kAudioServerPlugInTypeUUID))
     {
         char *args[] = { };
-        DebugMsg("zzz blah");
 		theAnswer = gAudioServerPlugInDriverRef;
         mainz(0, args);
     }
@@ -1512,6 +1511,28 @@ Done:
 
 #pragma mark Device Property Operations
 
+UInt32 gDeviceIsHidden = 1;
+
+static void
+UpdateDeviceHiddenness() {
+    AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyIsHidden, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMaster };
+
+    OSStatus status = gPlugIn_Host->PropertiesChanged(gPlugIn_Host, kObjectID_Device, 1, &theAddress);
+    DebugMsg("zzz proprty update, hidden: %i, status: %x", gDeviceIsHidden, status);
+}
+
+void
+DeviceEnabled() {
+    gDeviceIsHidden = 0;
+    UpdateDeviceHiddenness();
+}
+
+void
+DeviceDisabled() {
+    gDeviceIsHidden = 1;
+    UpdateDeviceHiddenness();
+}
+
 static Boolean	BlackHole_HasDeviceProperty(AudioServerPlugInDriverRef inDriver, AudioObjectID inObjectID, pid_t inClientProcessID, const AudioObjectPropertyAddress* inAddress)
 {
 	//	This method returns whether or not the given object has the given property.
@@ -2180,7 +2201,7 @@ static OSStatus	BlackHole_GetDevicePropertyData(AudioServerPlugInDriverRef inDri
 		case kAudioDevicePropertyIsHidden:
 			//	This returns whether or not the device is visible to clients.
 			FailWithAction(inDataSize < sizeof(UInt32), theAnswer = kAudioHardwareBadPropertySizeError, Done, "BlackHole_GetDevicePropertyData: not enough space for the return value of kAudioDevicePropertyIsHidden for the device");
-			*((UInt32*)outData) = 0;
+			*((UInt32*)outData) = gDeviceIsHidden;
 			*outDataSize = sizeof(UInt32);
 			break;
 

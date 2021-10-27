@@ -88,8 +88,13 @@
 //   Typedefs and Defines
 //================================================================================================
 //
+// Volt 176
 #define kMyVendorID		11098
 #define kMyProductID		34
+
+
+void DeviceDisabled();
+void DeviceEnabled();
 
 typedef struct MyPrivateData {
     io_object_t					notification;
@@ -130,6 +135,8 @@ void DeviceNotification( void *		refCon,
     {
         printf("zzz Device 0x%08x removed.\n", service);
     
+        DeviceDisabled();
+
         // Dump our private data to stdout just to see what it looks like.
         //
         CFShow(privateDataRef->deviceName);
@@ -180,6 +187,8 @@ void DeviceAdded(void *refCon, io_iterator_t iterator)
 
         printf("zzz Device 0x%08x added.\n", usbDevice);
         
+        DeviceEnabled();
+
         // Add some app-specific information about this device.
         // Create a buffer to hold the data.
         
