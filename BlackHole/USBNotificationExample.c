@@ -90,7 +90,6 @@
 //
 // Volt 176
 #define kMyVendorID		11098
-#define kMyProductID		34
 
 
 void DeviceDisabled();
@@ -284,14 +283,11 @@ int mainz (int argc, const char *argv[])
     CFNumberRef			numberRef;
     kern_return_t		kr;
     long			usbVendor = kMyVendorID;
-    long			usbProduct = kMyProductID;
     
     // pick up command line arguments
     //
     if (argc > 1)
         usbVendor = atoi(argv[1]);
-    if (argc > 2)
-        usbProduct = atoi(argv[2]);
         
     // first create a master_port for my task
     //
@@ -302,7 +298,7 @@ int mainz (int argc, const char *argv[])
         return -1;
     }
 
-    printf("zzz Looking for devices matching vendor ID=%ld and product ID=%ld\n", usbVendor, usbProduct);
+    printf("zzz Looking for devices matching vendor ID=%ld and product ID=*\n", usbVendor);
 
     // Set up the matching criteria for the devices we're interested in.  The matching criteria needs to follow
     // the same rules as kernel drivers:  mainly it needs to follow the USB Common Class Specification, pp. 6-7.
@@ -330,21 +326,17 @@ int mainz (int argc, const char *argv[])
     // Create a CFNumber for the idVendor and set the value in the dictionary
     //
     numberRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &usbVendor);
-    CFDictionarySetValue( 
-            matchingDict, 
-            CFSTR(kUSBVendorID), 
-            numberRef);
-    CFRelease(numberRef);
-    
-    // Create a CFNumber for the idProduct and set the value in the dictionary
-    //
-    numberRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &usbProduct);
-    CFDictionarySetValue( 
-            matchingDict, 
-            CFSTR(kUSBProductID), 
+    CFDictionarySetValue(
+            matchingDict,
+            CFSTR(kUSBVendorID),
             numberRef);
     CFRelease(numberRef);
     numberRef = 0;
+
+    // Wildcard productID to match all Volt devices, filter later in the DeviceAdded callback
+    // https://developer.apple.com/forums/thread/17194
+    // https://developer.apple.com/library/archive/qa/qa1076/_index.html
+    CFDictionarySetValue(matchingDict, CFSTR(kUSBProductID), CFSTR("*"));
 
     // Create a notification port and add its run loop event source to our run loop
     // This is how async notifications get set up.
