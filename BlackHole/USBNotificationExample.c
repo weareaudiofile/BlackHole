@@ -110,6 +110,26 @@ static IONotificationPortRef	gNotifyPort;
 static io_iterator_t		gAddedIter;
 static CFRunLoopRef		gRunLoop;
 
+static int
+IsVoltProduct(IOUSBDeviceInterface245** deviceInterface) {
+    UInt16 vendorID;
+    UInt16 productID;
+    kern_return_t kr;
+    
+    
+    kr = (*deviceInterface)->GetDeviceProduct(deviceInterface, &productID);
+    if (KERN_SUCCESS != kr) {
+        return 0;
+    }
+
+    kr = (*deviceInterface)->GetDeviceVendor(deviceInterface, &vendorID);
+    if (KERN_SUCCESS != kr) {
+        return 0;
+    }
+
+    return (vendorID == kMyVendorID && (32 <= productID && productID <= 36));
+}
+
 //================================================================================================
 //
 //	DeviceNotification
@@ -134,7 +154,7 @@ void DeviceNotification( void *		refCon,
     {
         printf("zzz Device 0x%08x removed.\n", service);
     
-        DeviceDisabled();
+        if (IsVoltProduct(privateDataRef->deviceInterface)) DeviceDisabled();
 
         // Dump our private data to stdout just to see what it looks like.
         //
@@ -186,8 +206,6 @@ void DeviceAdded(void *refCon, io_iterator_t iterator)
 
         printf("zzz Device 0x%08x added.\n", usbDevice);
         
-        DeviceEnabled();
-
         // Add some app-specific information about this device.
         // Create a buffer to hold the data.
         
@@ -247,6 +265,8 @@ void DeviceAdded(void *refCon, io_iterator_t iterator)
             printf("Location ID: 0x%lx\n", locationID);
             
         }
+        
+        if (IsVoltProduct(privateDataRef->deviceInterface)) DeviceEnabled();
 
         privateDataRef->locationID = locationID;
 
