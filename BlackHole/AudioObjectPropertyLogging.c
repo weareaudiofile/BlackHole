@@ -12,8 +12,8 @@
 #define    DebugMsg(inFormat, ...)    syslog(LOG_NOTICE, inFormat, ## __VA_ARGS__)
 
 static void
-dumpAudioObjectArray(UInt32* outDataSize, void* outData, const char* s) {
-    UInt32 n = *outDataSize / sizeof(UInt32);
+dumpAudioObjectArray(UInt32 outDataSize, const void* outData, const char* s) {
+    UInt32 n = outDataSize / sizeof(UInt32);
     AudioObjectID * x = (AudioObjectID*)(outData);
 
     DebugMsg(" --> Num %ss: %i", s, n);
@@ -24,33 +24,34 @@ dumpAudioObjectArray(UInt32* outDataSize, void* outData, const char* s) {
 }
 
 void
-dumpGetProperty(AudioObjectID inObjectID, const AudioObjectPropertyAddress* inAddress, const void* inQualifierData, UInt32* outDataSize, void* outData) {
+dumpAudioObjectProperty(bool get, AudioObjectID inObjectID, const AudioObjectPropertyAddress* inAddress, const void* inQualifierData, UInt32 dataSize, const void* data) {
     AudioObjectPropertySelector a = inAddress->mSelector;
     AudioObjectPropertySelector b = inAddress->mScope;
-    DebugMsg("GetPropertyData result: object id: %u address: (%c%c%c%c, %c%c%c%c, %u)", inObjectID, a>>24, a>>16, a>>8, a, b>>24, b>>16, b>>8, b, inAddress->mElement);
+    DebugMsg("%sPropertyData result: object id: %u address: (%c%c%c%c, %c%c%c%c, %u)", (get) ? "Get" : "Set",
+             inObjectID, a>>24, a>>16, a>>8, a, b>>24, b>>16, b>>8, b, inAddress->mElement);
 
     if (kAudioDevicePropertyTransportType == inAddress->mSelector) {
-        UInt32 x = *(UInt32*)(outData);
+        UInt32 x = *(UInt32*)(data);
         DebugMsg(" --> %c%c%c%c (0x%x)", x>>24, x>>16, x>>8, x, x);
     } else if (kAudioPlugInPropertyDeviceList == inAddress->mSelector) {
-        UInt32 n = *outDataSize / sizeof(UInt32);
-        UInt32 * x = (UInt32*)(outData);
+        UInt32 n = dataSize / sizeof(UInt32);
+        UInt32 * x = (UInt32*)(data);
         DebugMsg("Num Device: %i", n);
 
         for (UInt32 i = 0; i < n; i++) {
             DebugMsg("Device: %i", x[i]);
         }
     } else if (kAudioDevicePropertyNominalSampleRate == inAddress->mSelector) {
-        Float64 c =  *(Float64*)(outData);
+        Float64 c =  *(Float64*)(data);
 
         DebugMsg(" --> %lf", c);
     } else if(kAudioObjectPropertyClass == inAddress->mSelector || kAudioObjectPropertyBaseClass == inAddress->mSelector) {
-        AudioClassID x = *(AudioClassID *)(outData);
+        AudioClassID x = *(AudioClassID *)(data);
 //        DebugMsg(" --> %u", (unsigned int)x);
         // WTF bracketed part missing sometimes
         DebugMsg("~~ --> (0x%x) %c%c%c%c", x, x>>24, x>>16, x>>8, x);
     } else if(kAudioDevicePropertyDeviceUID == inAddress->mSelector || kAudioObjectPropertyName == inAddress->mSelector || kAudioSelectorControlPropertyItemName == inAddress->mSelector || kAudioBoxPropertyBoxUID == inAddress->mSelector) {
-        CFStringRef x = *(CFStringRef *)(outData);
+        CFStringRef x = *(CFStringRef *)(data);
         
         if (kAudioSelectorControlPropertyItemName == inAddress->mSelector) {
             UInt32 y = 0;
@@ -65,10 +66,10 @@ dumpGetProperty(AudioObjectID inObjectID, const AudioObjectPropertyAddress* inAd
         
 //        CFRelease(x); // some yes some no?
     } else if (kAudioDevicePropertyStreams == inAddress->mSelector) {
-        dumpAudioObjectArray(outDataSize, outData, "stream");
+        dumpAudioObjectArray(dataSize, data, "stream");
     } else if (kAudioStreamPropertyAvailablePhysicalFormats == inAddress->mSelector) {
-        UInt32 n = *outDataSize / sizeof(AudioStreamRangedDescription);
-        AudioStreamRangedDescription * x = (AudioStreamRangedDescription*)(outData);
+        UInt32 n = dataSize / sizeof(AudioStreamRangedDescription);
+        AudioStreamRangedDescription * x = (AudioStreamRangedDescription*)(data);
 
         DebugMsg(" --> Num formats: %i", n);
 
@@ -81,34 +82,34 @@ dumpGetProperty(AudioObjectID inObjectID, const AudioObjectPropertyAddress* inAd
 
         }
     } else if(kAudioStreamPropertyPhysicalFormat == inAddress->mSelector) {
-        AudioStreamBasicDescription as = *(AudioStreamBasicDescription *)(outData);
+        AudioStreamBasicDescription as = *(AudioStreamBasicDescription *)(data);
         AudioFormatID fmt = as.mFormatID;
 
         DebugMsg("format: %lf, %c%c%c%c, 0x%x, bpp: %i, fpp: %i, bpf: %i, ch: %i, bitspc: %i", as.mSampleRate, fmt>>24, fmt>>16, fmt>>8, fmt, as.mFormatFlags, as.mBytesPerPacket, as.mFramesPerPacket, as.mBytesPerFrame, as.mChannelsPerFrame, as.mBitsPerChannel);
     } else if (kAudioObjectPropertyControlList == inAddress->mSelector) {
-        dumpAudioObjectArray(outDataSize, outData, "control");
+        dumpAudioObjectArray(dataSize, data, "control");
     } else if (kAudioSelectorControlPropertyCurrentItem == inAddress->mSelector) {
-        dumpAudioObjectArray(outDataSize, outData, "current control");
-    } else if(kAudioDevicePropertyZeroTimeStampPeriod == inAddress->mSelector || kAudioDevicePropertyIsHidden == kAudioDevicePropertyZeroTimeStampPeriod == inAddress->mSelector || kAudioStreamPropertyStartingChannel == inAddress->mSelector || kAudioDevicePropertyIsHidden == inAddress->mSelector || kAudioDevicePropertyDeviceCanBeDefaultDevice == inAddress->mSelector || kAudioDevicePropertyDeviceCanBeDefaultSystemDevice == inAddress->mSelector || kAudioBooleanControlPropertyValue == inAddress->mSelector || kAudioDevicePropertySafetyOffset == inAddress->mSelector || kAudioDevicePropertySafetyOffset == inAddress->mSelector || kAudioDevicePropertyDeviceIsRunning == inAddress->mSelector) {
-        UInt32 x = *(UInt32*)(outData);
+        dumpAudioObjectArray(dataSize, data, "current control");
+    } else if(kAudioDevicePropertyZeroTimeStampPeriod == inAddress->mSelector || kAudioDevicePropertyIsHidden == kAudioDevicePropertyZeroTimeStampPeriod == inAddress->mSelector || kAudioStreamPropertyStartingChannel == inAddress->mSelector || kAudioDevicePropertyIsHidden == inAddress->mSelector || kAudioDevicePropertyDeviceCanBeDefaultDevice == inAddress->mSelector || kAudioDevicePropertyDeviceCanBeDefaultSystemDevice == inAddress->mSelector || kAudioBooleanControlPropertyValue == inAddress->mSelector || kAudioDevicePropertySafetyOffset == inAddress->mSelector || kAudioDevicePropertySafetyOffset == inAddress->mSelector || kAudioDevicePropertyDeviceIsRunning == inAddress->mSelector || kAudioStreamPropertyIsActive == inAddress->mSelector || kAudioDevicePropertyLatency == inAddress->mSelector) {
+        UInt32 x = *(UInt32*)(data);
         DebugMsg(" --> %i", x);
     } else if (kAudioStreamPropertyTerminalType == inAddress->mSelector) {
-        UInt32 x = *(UInt32*)(outData);
+        UInt32 x = *(UInt32*)(data);
         DebugMsg(" --> %c%c%c%c (0x%x)", x>>24, x>>16, x>>8, x, x);
     } else if (kAudioControlPropertyScope == inAddress->mSelector) {
-        AudioObjectPropertyScope x = *(AudioObjectPropertyScope*)(outData);
+        AudioObjectPropertyScope x = *(AudioObjectPropertyScope*)(data);
         DebugMsg(" --> %c%c%c%c (0x%x)", x>>24, x>>16, x>>8, x, x);
 
     } else if (kAudioControlPropertyElement == inAddress->mSelector) {
-        AudioObjectPropertyElement x = *(AudioObjectPropertyElement*)(outData);
+        AudioObjectPropertyElement x = *(AudioObjectPropertyElement*)(data);
         DebugMsg(" -->  (0x%x) %c%c%c%c", x, x>>24, x>>16, x>>8, x);
     } else if (kAudioLevelControlPropertyScalarValue == inAddress->mSelector || kAudioLevelControlPropertyDecibelValue == inAddress->mSelector) {
-        Float32 x = *(Float32*)(outData);
+        Float32 x = *(Float32*)(data);
         DebugMsg(" --> %f", x);
     } else if (kAudioLevelControlPropertyDecibelRange == inAddress->mSelector) {
-        AudioValueRange x = *(AudioValueRange *)outData;
+        AudioValueRange x = *(AudioValueRange *)data;
         DebugMsg(" --> [%lf, %lf]", x.mMinimum, x.mMaximum);
     } else if (kAudioDevicePropertySafetyOffset == inAddress->mSelector) {
-        dumpAudioObjectArray(outDataSize, outData, "box");
+        dumpAudioObjectArray(dataSize, data, "box");
     }
 }

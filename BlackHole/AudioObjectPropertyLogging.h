@@ -10,7 +10,7 @@
 
 #include <CoreAudio/CoreAudio.h>
 
-void dumpGetProperty(AudioObjectID inObjectID, const AudioObjectPropertyAddress* inAddress, const void* inQualifierData, UInt32* outDataSize, void* outData);
+void dumpAudioObjectProperty(bool get, AudioObjectID inObjectID, const AudioObjectPropertyAddress* inAddress, const void* inQualifierData, UInt32 dataSize, const void* data);
 
 
 #endif /* AudioObjectPropertyLogging_h */

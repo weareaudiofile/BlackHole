@@ -586,7 +586,7 @@ static OSStatus	BlackHole_GetPropertyData(AudioServerPlugInDriverRef inDriver, A
 			break;
 	};
 
-    dumpGetProperty(inObjectID, inAddress, inQualifierData, outDataSize, outData);
+    dumpAudioObjectProperty(true, inObjectID, inAddress, inQualifierData, *outDataSize, outData);
 
 Done:
 	return theAnswer;
@@ -643,6 +643,7 @@ static OSStatus	BlackHole_SetPropertyData(AudioServerPlugInDriverRef inDriver, A
 		gPlugIn_Host->PropertiesChanged(gPlugIn_Host, inObjectID, theNumberPropertiesChanged, theChangedAddresses);
 	}
 
+    dumpAudioObjectProperty(false, inObjectID, inAddress, inQualifierData, inDataSize, inData);
 Done:
 	return theAnswer;
 }
